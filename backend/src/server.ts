@@ -11,7 +11,7 @@ import entriesRoutes from './routes/entries';
 import unitRoutes from './routes/units';
 import scheduleRoutes from './routes/schedule';
 import todoRoutes from './routes/todos';
-
+import registerRoutes from './routes/register';
 // 📦 Load .env variables
 dotenv.config();
 
@@ -33,6 +33,7 @@ app.use('/api/entries', entriesRoutes);
 app.use('/api/units', unitRoutes);
 app.use('/api/schedule', scheduleRoutes);
 app.use('/api/todos', todoRoutes);
+app.use('/api/register', registerRoutes);
 
 // ✅ Optional: Global error handler
 // app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

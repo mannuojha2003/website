@@ -1,3 +1,5 @@
+// src/pages/Dashboard.tsx
+
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
@@ -5,80 +7,85 @@ import EntriesTable from '../components/EntriesTable';
 import WelcomeScreen from '../components/WelcomeScreen';
 import { useAuth } from '../context/AuthContext';
 import { Entry, EntryType } from '../types';
-import axios from 'axios';
+import api from '../utils/axiosInstance';
 
 const Dashboard: React.FC = () => {
   const { userRole } = useAuth();
+
   const [selectedMenu, setSelectedMenu] = useState<EntryType | null>(null);
   const [selectedUnit, setSelectedUnit] = useState<string>('AT');
   const [allEntries, setAllEntries] = useState<Entry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [units, setUnits] = useState<any[]>([]); // New state for units
+  const [loading, setLoading] = useState<boolean>(true);
 
-  // ✅ Fetch all entries from backend
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [entriesRes, unitsRes] = await Promise.all([
+        api.get('/api/entries'),
+        api.get('/api/units')
+      ]);
+      setAllEntries(Array.isArray(entriesRes.data) ? entriesRes.data : []);
+      setUnits(Array.isArray(unitsRes.data) ? unitsRes.data : []);
+    } catch (err) {
+      console.error('Failed to fetch data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchEntries = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const res = await axios.get('/api/entries', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        // ✅ Ensure response is an array to avoid `.filter()` error
-        const entries = Array.isArray(res.data) ? res.data : [];
-        setAllEntries(entries);
-      } catch (err) {
-        console.error('Failed to fetch entries:', err);
-        setAllEntries([]); // fallback to empty on error
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchEntries();
+    fetchData();
   }, []);
 
   const isHome = !selectedMenu;
 
-  // ✅ Filter data by selected type & unit
   const filteredData = selectedMenu
     ? allEntries.filter(
-        (entry) =>
-          entry.data?.type === selectedMenu && entry.data?.unit === selectedUnit
+        (entry) => entry.type === selectedMenu && entry.company_name === selectedUnit
       )
     : [];
 
+  const handleGlobalSearchResult = (company: string, menu: EntryType) => {
+    setSelectedUnit(company);
+    setSelectedMenu(menu);
+  };
+
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-gradient-light dark:bg-gradient-dark transition-all duration-500">
-      <Sidebar
-        onSelectMenu={(menu) => setSelectedMenu(menu)}
-        onSelectUnit={(unit) => setSelectedUnit(unit)}
-      />
-
-      <div className="flex flex-col flex-1 overflow-hidden animate-fadeIn">
-        <Header
-          currentOption={
-            isHome ? 'Dashboard' : `${selectedMenu} - ${selectedUnit}`
-          }
+    <div className="flex h-screen overflow-hidden">
+      <Sidebar onSelectMenu={setSelectedMenu} onSelectUnit={setSelectedUnit} />
+      <div className="flex flex-col flex-1 overflow-auto">
+        <Header 
+          selectedMenu={selectedMenu} 
+          selectedUnit={selectedUnit} 
+          allEntries={allEntries}
+          onSearchResultClick={handleGlobalSearchResult}
         />
-
-        <div className="p-4 overflow-auto flex-1 bg-white dark:bg-gray-900 rounded-t-md shadow-inner transition-colors duration-500">
+        <main className="p-4 flex-1 overflow-auto bg-gray-50 dark:bg-gray-900">
           {loading ? (
-            <div className="text-center text-gray-500">Loading entries...</div>
+            <div>Loading entries...</div>
           ) : isHome ? (
             <WelcomeScreen />
           ) : (
             <>
               <button
                 onClick={() => setSelectedMenu(null)}
-                className="mb-4 px-4 py-2 bg-accent text-white rounded hover:scale-105 transition-all"
+                className="mb-4 px-4 py-2 bg-blue-600 text-white rounded hover:scale-105 transition-transform"
               >
                 ← Return to Dashboard
               </button>
-              <EntriesTable type={selectedMenu!} />
 
+              <EntriesTable
+                type={selectedMenu!}
+                entries={filteredData}
+                units={units}
+                userRole={userRole}
+                selectedUnit={selectedUnit}
+                onRefresh={fetchData}
+              />
             </>
           )}
-        </div>
+        </main>
       </div>
     </div>
   );

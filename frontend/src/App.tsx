@@ -9,14 +9,30 @@ import UnitsPage from './pages/UnitsPage';
 import UnitDetailPage from './pages/UnitDetailPage';
 import DarkModeToggle from './components/DarkModeToggle';
 
+import SignInOptionPage from './pages/SignInOptionPage'; // new page to choose sign-in or sign-up
+import SignUpPage from './pages/SignUpPage';             // sign-up page
+import PendingListPage from './pages/PendingListPage';
+import EmployeeLogsPage from './pages/EmployeeLogsPage';
+
 const App: React.FC = () => {
   return (
     <AuthProvider>
       <Router>
         <DarkModeToggle />
         <Routes>
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          {/* Redirect root to the signin option page */}
+          <Route path="/" element={<Navigate to="/signin" replace />} />
+
+          {/* The new Sign In / Sign Up selection page */}
+          <Route path="/signin" element={<SignInOptionPage />} />
+
+          {/* Sign Up page */}
+          <Route path="/signup" element={<SignUpPage />} />
+
+          {/* Login page */}
           <Route path="/login" element={<Login />} />
+
+          {/* Protected routes */}
           <Route
             path="/dashboard"
             element={
@@ -33,8 +49,6 @@ const App: React.FC = () => {
               </ProtectedRoute>
             }
           />
-
-          {/* Unit list */}
           <Route
             path="/units"
             element={
@@ -43,8 +57,6 @@ const App: React.FC = () => {
               </ProtectedRoute>
             }
           />
-
-          {/* Single unit detail */}
           <Route
             path="/units/:unitName"
             element={
@@ -53,7 +65,24 @@ const App: React.FC = () => {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/pending-list/:unitName"
+            element={
+              <ProtectedRoute>
+                <PendingListPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/employee-logs"
+            element={
+              <ProtectedRoute>
+                <EmployeeLogsPage />
+              </ProtectedRoute>
+            }
+          />
 
+          {/* Fallback 404 route */}
           <Route path="*" element={<div>404 - Page Not Found</div>} />
         </Routes>
       </Router>

@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+// Remove top-level JWT_SECRET constant
 
 export interface AuthenticatedRequest extends Request {
   user?: {
@@ -10,29 +10,34 @@ export interface AuthenticatedRequest extends Request {
   };
 }
 
-// ✅ Middleware: Verify JWT and attach user info
+// Middleware: Verify JWT and attach user info
 export const authenticateToken = (
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
 ) => {
-  const authHeader = req.headers.authorization;
-  const token = authHeader?.split(' ')[1];
+  const authHeader = req.headers['authorization'];
+  console.log('Incoming Authorization Header:', authHeader ? 'Present' : 'Missing');
+  const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
-    return res.status(401).json({ message: 'Access Denied. No Token Provided.' });
+    console.log('Authentication failed: No token provided');
+    return res.status(401).json({ error: 'Access denied. No token provided.' });
   }
 
   try {
+    const JWT_SECRET = process.env.JWT_SECRET || 'secret_key';
     const decoded = jwt.verify(token, JWT_SECRET) as { username: string; role: 'admin' | 'employee' };
+    console.log('Token verified for user:', decoded.username);
     req.user = decoded;
     next();
   } catch (err) {
-    return res.status(403).json({ message: 'Invalid or Expired Token.' });
+    console.log('Token verification failed:', (err as Error).message);
+    return res.status(403).json({ error: 'Invalid or expired token.' });
   }
 };
 
-// ✅ Middleware: Allow only admins
+// Middleware: Allow only admins
 export const requireAdmin = (
   req: AuthenticatedRequest,
   res: Response,
@@ -44,7 +49,7 @@ export const requireAdmin = (
   next();
 };
 
-// ✅ Middleware: Allow admins or employees
+// Middleware: Allow admins or employees
 export const requireEmployeeOrAdmin = (
   req: AuthenticatedRequest,
   res: Response,

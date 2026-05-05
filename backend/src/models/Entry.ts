@@ -21,6 +21,7 @@ export interface IEntry extends Document {
   date: string;
   description: DescriptionItem[];
   total: string;
+  createdBy?: string;
 }
 
 const DescriptionItemSchema = new Schema<DescriptionItem>({
@@ -34,7 +35,7 @@ const EntrySchema = new Schema<IEntry>(
   {
     type: {
       type: String,
-      enum: ['Quotation', 'Invoice', 'Purchase', 'Goods Exp', 'Cash Exp'],
+      enum: ['Quotation', 'Invoice', 'Purchase', 'Sale', 'Expense', 'Payment Pending', 'Goods Exp', 'Cash Exp'],
       required: true,
     },
     company_name: String,
@@ -52,6 +53,7 @@ const EntrySchema = new Schema<IEntry>(
       required: true,
     },
     total: { type: String, required: true },
+    createdBy: { type: String, required: false },
   },
   { timestamps: true }
 );

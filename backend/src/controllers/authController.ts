@@ -2,8 +2,9 @@ import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import User from '../models/User';
+import Session from '../models/Session';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'secret_key';
+// Remove top-level JWT_SECRET constant
 
 // ✅ Register new user
 export const registerUser = async (req: Request, res: Response) => {
@@ -29,7 +30,8 @@ export const registerUser = async (req: Request, res: Response) => {
 
     await newUser.save();
 
-    const token = jwt.sign({ id: newUser._id, role: newUser.role }, JWT_SECRET, {
+    const JWT_SECRET = process.env.JWT_SECRET || 'secret_key';
+    const token = jwt.sign({ id: newUser._id, username: newUser.username, role: newUser.role }, JWT_SECRET, {
       expiresIn: '1d',
     });
 
@@ -62,17 +64,48 @@ export const loginUser = async (req: Request, res: Response) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(401).json({ error: 'Invalid credentials' });
 
-    const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, {
+    const JWT_SECRET = process.env.JWT_SECRET || 'secret_key';
+    const token = jwt.sign({ id: user._id, username: user.username, role: user.role }, JWT_SECRET, {
       expiresIn: '1d',
     });
+
+    const newSession = new Session({
+      username: user.username,
+      loginTime: new Date(),
+    });
+    await newSession.save();
 
     res.json({
       message: 'Login successful',
       token,
+      sessionId: newSession._id,
       user: { username: user.username, role: user.role },
     });
   } catch (err) {
     console.error('Login error:', err);
     res.status(500).json({ error: 'Server error during login' });
+  }
+};
+
+// ✅ Logout user and calculate working time
+export const logoutUser = async (req: Request, res: Response) => {
+  const { sessionId } = req.body;
+  if (!sessionId) {
+    return res.status(400).json({ error: 'Session ID required' });
+  }
+
+  try {
+    const session = await Session.findById(sessionId);
+    if (!session) return res.status(404).json({ error: 'Session not found' });
+
+    session.logoutTime = new Date();
+    const diffMs = session.logoutTime.getTime() - session.loginTime.getTime();
+    session.workingDurationMinutes = Math.round(diffMs / 60000); // convert ms to mins
+    
+    await session.save();
+    res.json({ message: 'Logout successful', session });
+  } catch (err) {
+    console.error('Logout error:', err);
+    res.status(500).json({ error: 'Server error during logout' });
   }
 };

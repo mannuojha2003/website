@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import Entry from '../models/Entry';
+import { AuthenticatedRequest } from '../middleware/authMiddleware';
 
 // GET all entries
 export const getAllEntries = async (req: Request, res: Response) => {
@@ -34,6 +35,7 @@ export const addEntry = async (req: Request, res: Response) => {
       description,
       date,
       total: total.toFixed(2),
+      createdBy: (req as AuthenticatedRequest).user?.username || 'unknown',
       ...rest,
     });
 

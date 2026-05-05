@@ -1,9 +1,14 @@
 // src/types/index.ts
+export type Role = 'admin' | 'employee';
+
 
 export type EntryType =
   | 'Quotation'
   | 'Invoice'
   | 'Purchase'
+  | 'Sale'
+  | 'Expense'
+  | 'Payment Pending'
   | 'Goods Exp'
   | 'Cash Exp';
 

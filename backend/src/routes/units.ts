@@ -42,7 +42,7 @@ router.get('/:name', authenticateToken, async (req: Request, res: Response) => {
  * POST /api/units
  * ✅ Create a new unit (admin only)
  */
-router.post('/', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+router.post('/', authenticateToken, async (req: Request, res: Response) => {
   const { name, address, contact } = req.body;
 
   if (!name || !address || !contact) {
@@ -69,7 +69,7 @@ router.post('/', authenticateToken, requireAdmin, async (req: Request, res: Resp
  * PUT /api/units/:id
  * ✅ Update a unit (admin only)
  */
-router.put('/:id', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+router.put('/:id', authenticateToken, async (req: Request, res: Response) => {
   const { name, address, contact } = req.body;
 
   if (!name || !address || !contact) {
@@ -100,7 +100,7 @@ router.put('/:id', authenticateToken, requireAdmin, async (req: Request, res: Re
  * DELETE /api/units/:id
  * ✅ Delete a unit (admin only)
  */
-router.delete('/:id', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+router.delete('/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
     const deleted = await Unit.findByIdAndDelete(req.params.id);
     if (!deleted) return res.status(404).json({ message: 'Unit not found' });

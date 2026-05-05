@@ -11,7 +11,6 @@ const UnitSchema: Schema = new Schema<IUnit>(
     name: {
       type: String,
       required: [true, 'Unit name is required'],
-      unique: true,
       trim: true,
     },
     address: {
@@ -25,7 +24,7 @@ const UnitSchema: Schema = new Schema<IUnit>(
       trim: true,
       validate: {
         validator: function (v: string) {
-          return /^[0-9+\-\s]{6,15}$/.test(v); // basic phone validation
+          return /^[0-9+\-\s]{3,20}$/.test(v); // more relaxed phone validation
         },
         message: 'Invalid contact number format.',
       },

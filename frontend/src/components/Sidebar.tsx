@@ -1,11 +1,10 @@
 // src/components/Sidebar.tsx
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { EntryType } from '../types';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Users, MapPin, PlusCircle } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { useAuth } from '../context/AuthContext'; // ✅ added
+import api from '../utils/axiosInstance';
 
 interface SidebarProps {
   onSelectMenu: (menu: EntryType) => void;
@@ -20,214 +19,157 @@ interface Unit {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ onSelectMenu, onSelectUnit }) => {
-  const companies = ['AT', 'PAM', 'MSC', 'SRS'];
-  const menus: EntryType[] = ['Quotation', 'Invoice', 'Purchase'];
-  const salesMenus: EntryType[] = ['Goods Exp', 'Cash Exp'];
-
-  const [units, setUnits] = useState<Unit[]>([]);
-  const [activeCompany, setActiveCompany] = useState<string | null>(null);
-  const [isOpen, setIsOpen] = useState<boolean>(true);
-  const [showSales, setShowSales] = useState(false);
-  const [newUnit, setNewUnit] = useState<Unit>({ name: '', address: '', contact: '' });
-  const [showAddForm, setShowAddForm] = useState(false);
-
+  const { userRole } = useAuth();
   const navigate = useNavigate();
-  const token = localStorage.getItem('token');
+  const companies = ['AT', 'PAM', 'MSC', 'SRS'];
+  const menus: EntryType[] = ['Quotation', 'Invoice', 'Sale', 'Purchase'];
+  
+  const [units, setUnits] = useState<Unit[]>([]);
+  const [isOpen, setIsOpen] = useState(true);
+  const [hoveredCompany, setHoveredCompany] = useState<string | null>(null);
+  const [showAddUnit, setShowAddUnit] = useState(false);
+  const [newUnit, setNewUnit] = useState({ name: '', address: '', contact: '' });
 
-  const { userRole } = useAuth(); // ✅ get role
-
-  useEffect(() => {
+  React.useEffect(() => {
     fetchUnits();
   }, []);
 
   const fetchUnits = async () => {
     try {
-      const res = await axios.get('/api/units', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = Array.isArray(res.data) ? res.data : [];
-      setUnits(data);
+      const res = await api.get('/api/units');
+      if (Array.isArray(res.data)) {
+        setUnits(res.data);
+      }
     } catch (err) {
-      console.error('Failed to fetch units:', err);
-      setUnits([]);
+      console.error('Failed to fetch units', err);
     }
-  };
-
-  const handleCompanyClick = (company: string) => {
-    setActiveCompany(prev => (prev === company ? null : company));
-    onSelectUnit(company);
   };
 
   const handleAddUnit = async () => {
-    const trimmedName = newUnit.name.trim();
-    const alphanumericRegex = /^[a-zA-Z0-9\s]+$/;
-
-    if (!trimmedName) return alert('Unit name is required.');
-    if (!alphanumericRegex.test(trimmedName)) return alert('Unit name must be alphanumeric.');
-    if (units.some(u => u.name.toLowerCase() === trimmedName.toLowerCase())) return alert('A unit with this name already exists.');
-
     try {
-      const res = await axios.post('/api/units', newUnit, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setUnits(prev => [...prev, res.data]);
+      await api.post('/api/units', newUnit);
       setNewUnit({ name: '', address: '', contact: '' });
-      setShowAddForm(false);
+      setShowAddUnit(false);
+      fetchUnits();
     } catch (err: any) {
-      if (err?.response?.status === 403) {
-        alert('Only admins can add new units.');
-      } else {
-        alert(err?.response?.data?.message || 'Failed to add unit');
-      }
+      alert(err.response?.data?.message || 'Failed to add unit');
     }
   };
 
-  const handleUnitClick = (unitName: string) => {
-    onSelectUnit(unitName);
-    navigate(`/units/${encodeURIComponent(unitName)}`);
+  const handleSubOptionClick = (company: string, menu: EntryType) => {
+    onSelectUnit(company);
+    onSelectMenu(menu);
   };
 
   return (
     <>
-      <button
-        className="md:hidden fixed top-4 left-4 z-50 bg-blue-600 text-white p-2 rounded"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        {isOpen ? <X size={20} /> : <Menu size={20} />}
-      </button>
+      <div className="px-4 py-4 bg-gray-100 dark:bg-gray-900 shadow-sm flex justify-between items-center md:hidden">
+        <button onClick={() => setIsOpen(!isOpen)} aria-label="Toggle sidebar">
+          {isOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+      </div>
 
-      <div className={`fixed top-0 left-0 h-full w-64 bg-white dark:bg-gray-900 shadow-lg border-r transform transition-transform duration-300 z-40
-        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-        md:translate-x-0 md:static md:block`}
-      >
-        <div className="relative h-full">
-          <div className="p-4 space-y-4 pb-24 overflow-y-auto">
-            <ul className="space-y-4">
-              {companies.map(company => (
-                <li key={company}>
-                  <div
-                    onClick={() => handleCompanyClick(company)}
-                    className={`cursor-pointer font-semibold text-md transition-colors hover:text-blue-600 ${
-                      activeCompany === company ? 'text-blue-600' : 'text-gray-800 dark:text-gray-200'
-                    }`}
-                  >
-                    {company}
-                  </div>
-                  {activeCompany === company && (
-                    <ul className="ml-4 mt-2 space-y-1 animate-fadeIn">
-                      {menus.map(menu => (
-                        <li
-                          key={menu}
-                          onClick={() => onSelectMenu(menu)}
-                          className="cursor-pointer text-sm text-gray-600 dark:text-gray-300 hover:underline"
-                        >
-                          {menu}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              ))}
-
-              {/* Sales Section */}
-              <li>
+      <div className={`w-64 px-4 py-6 bg-white dark:bg-gray-800 h-full overflow-auto shadow-md ${isOpen ? 'block' : 'hidden'} md:block`}>
+        <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-6 tracking-wide">COMPANIES</h2>
+        {companies.map((company) => (
+          <div 
+            key={company} 
+            className="mb-2 relative"
+            onMouseEnter={() => setHoveredCompany(company)}
+            onMouseLeave={() => setHoveredCompany(null)}
+          >
+            <div className="cursor-pointer font-semibold text-lg py-2 px-3 rounded transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200">
+              {company}
+            </div>
+            
+            {/* Dropdown Menu on Hover */}
+            <div 
+              className={`ml-4 mt-1 space-y-1 transition-all duration-300 ease-in-out overflow-hidden ${
+                hoveredCompany === company ? 'max-h-48 opacity-100' : 'max-h-0 opacity-0 pointer-events-none'
+              }`}
+            >
+              {menus.map((menu) => (
                 <div
-                  onClick={() => setShowSales(prev => !prev)}
-                  className="cursor-pointer font-semibold text-md text-gray-800 dark:text-gray-200 hover:text-blue-600"
+                  key={menu}
+                  onClick={() => handleSubOptionClick(company, menu)}
+                  className="cursor-pointer text-sm py-1.5 px-3 rounded text-gray-600 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-300 font-medium"
                 >
-                  Sales
+                  {menu}
                 </div>
-                {showSales && (
-                  <ul className="ml-4 mt-2 space-y-1 animate-fadeIn">
-                    {salesMenus.map(menu => (
-                      <li
-                        key={menu}
-                        onClick={() => onSelectMenu(menu)}
-                        className="cursor-pointer text-sm text-gray-600 dark:text-gray-300 hover:underline"
-                      >
-                        {menu}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </li>
+              ))}
+            </div>
+          </div>
+        ))}
 
-              {/* Units Section */}
-              <li>
-                <div className="font-semibold text-md text-gray-700 dark:text-gray-300">
-                  Units
-                </div>
-                <ul className="ml-2 mt-2 space-y-1">
-                  {Array.isArray(units) && units.length > 0 ? (
-                    units.map(unit => (
-                      <li
-                        key={unit._id || unit.name}
-                        onClick={() => handleUnitClick(unit.name)}
-                        className="cursor-pointer text-sm text-gray-600 dark:text-gray-300 hover:text-blue-600"
-                      >
-                        {unit.name}
-                      </li>
-                    ))
-                  ) : (
-                    <li className="text-xs text-gray-500 italic">No units found</li>
-                  )}
-                </ul>
+        {/* Admin only: Employee Logs */}
+        {userRole === 'admin' && (
+          <div className="mt-8 border-t dark:border-gray-700 pt-4">
+            <button
+              onClick={() => navigate('/employee-logs')}
+              className="w-full flex items-center gap-3 px-3 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded font-semibold transition"
+            >
+              <Users size={20} />
+              Employee Logs
+            </button>
+          </div>
+        )}
 
-                {/* Only allow admin to add */}
-                {userRole === 'admin' && (
-                  <>
-                    <button
-                      onClick={() => setShowAddForm(prev => !prev)}
-                      className="mt-3 text-blue-500 text-xs hover:underline"
-                    >
-                      + Add Unit
-                    </button>
+        {/* Units Section */}
+        <div className="mt-8 border-t dark:border-gray-700 pt-4">
+          <div className="flex items-center justify-between px-3 mb-2">
+            <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400 tracking-wider uppercase">Units</h3>
+            <button 
+              onClick={() => setShowAddUnit(!showAddUnit)}
+              className="text-blue-600 hover:text-blue-700"
+              title="Add New Unit"
+            >
+              <PlusCircle size={18} />
+            </button>
+          </div>
 
-                    {showAddForm && (
-                      <div className="mt-2 space-y-2 text-sm text-gray-700 dark:text-gray-300">
-                        <input
-                          type="text"
-                          placeholder="Name"
-                          value={newUnit.name}
-                          onChange={e => setNewUnit({ ...newUnit, name: e.target.value })}
-                          className="w-full p-1 rounded bg-white dark:bg-gray-800 border text-sm"
-                        />
-                        <input
-                          type="text"
-                          placeholder="Address"
-                          value={newUnit.address}
-                          onChange={e => setNewUnit({ ...newUnit, address: e.target.value })}
-                          className="w-full p-1 rounded bg-white dark:bg-gray-800 border text-sm"
-                        />
-                        <input
-                          type="text"
-                          placeholder="Contact"
-                          value={newUnit.contact}
-                          onChange={e => setNewUnit({ ...newUnit, contact: e.target.value })}
-                          className="w-full p-1 rounded bg-white dark:bg-gray-800 border text-sm"
-                        />
-                        <button
-                          onClick={handleAddUnit}
-                          className="w-full p-1 bg-blue-600 text-white rounded hover:bg-blue-700"
-                        >
-                          Save Unit
-                        </button>
-                      </div>
-                    )}
-                  </>
-                )}
-              </li>
-            </ul>
+          {showAddUnit && (
+            <div className="px-3 mb-4 space-y-2 bg-gray-50 dark:bg-gray-900/50 p-2 rounded">
+              <input
+                placeholder="Unit Name"
+                className="w-full text-xs p-2 border rounded dark:bg-gray-800 dark:border-gray-700"
+                value={newUnit.name}
+                onChange={e => setNewUnit({...newUnit, name: e.target.value})}
+              />
+              <input
+                placeholder="Location"
+                className="w-full text-xs p-2 border rounded dark:bg-gray-800 dark:border-gray-700"
+                value={newUnit.address}
+                onChange={e => setNewUnit({...newUnit, address: e.target.value})}
+              />
+              <input
+                placeholder="Contact Number"
+                className="w-full text-xs p-2 border rounded dark:bg-gray-800 dark:border-gray-700"
+                value={newUnit.contact}
+                onChange={e => setNewUnit({...newUnit, contact: e.target.value})}
+              />
+              <button 
+                onClick={handleAddUnit}
+                className="w-full bg-blue-600 text-white text-xs py-2 rounded font-bold hover:bg-blue-700"
+              >
+                Save Unit
+              </button>
+            </div>
+          )}
+
+          <div className="space-y-1">
+            {units.map(unit => (
+              <div
+                key={unit._id}
+                onClick={() => navigate(`/units/${encodeURIComponent(unit.name)}`)}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded cursor-pointer transition"
+              >
+                <MapPin size={14} className="text-gray-400" />
+                <span className="truncate">{unit.name}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
-
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-25 z-30 md:hidden"
-          onClick={() => setIsOpen(false)}
-        />
-      )}
     </>
   );
 };

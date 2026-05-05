@@ -1,5 +1,8 @@
+// src/components/ToDoList.tsx
+
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+// Replace direct axios import with the custom axios instance
+import api from '../utils/axiosInstance';
 import { useAuth } from '../context/AuthContext';
 
 interface Task {
@@ -15,17 +18,13 @@ const ToDoList: React.FC = () => {
 
   const fetchTasks = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const res = await axios.get('/api/todos', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const data = Array.isArray(res.data) ? res.data : []; // ✅ Defensive check
+      // Use api instead of axios; no need to set Authorization header manually
+      const res = await api.get('/api/todos');
+      const data = Array.isArray(res.data) ? res.data : []; // Defensive check
       setTasks(data);
     } catch (err) {
       console.error('Failed to fetch todos', err);
-      setTasks([]); // ✅ Prevent tasks from being undefined
+      setTasks([]); // Prevent tasks being undefined
     }
   };
 
@@ -37,12 +36,7 @@ const ToDoList: React.FC = () => {
     if (!newTask.trim()) return;
 
     try {
-      const token = localStorage.getItem('token');
-      const res = await axios.post(
-        '/api/todos',
-        { text: newTask },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await api.post('/api/todos', { text: newTask });
       setTasks([res.data, ...tasks]);
       setNewTask('');
     } catch (err) {
@@ -52,12 +46,7 @@ const ToDoList: React.FC = () => {
 
   const toggleComplete = async (id: string) => {
     try {
-      const token = localStorage.getItem('token');
-      const res = await axios.patch(
-        `/api/todos/${id}/toggle`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await api.patch(`/api/todos/${id}/toggle`, {});
       setTasks(tasks.map((t) => (t._id === id ? res.data : t)));
     } catch (err) {
       console.error('Failed to toggle task', err);
@@ -66,10 +55,7 @@ const ToDoList: React.FC = () => {
 
   const deleteTask = async (id: string) => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`/api/todos/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.delete(`/api/todos/${id}`);
       setTasks(tasks.filter((t) => t._id !== id));
     } catch (err) {
       console.error('Failed to delete task', err);
@@ -98,16 +84,10 @@ const ToDoList: React.FC = () => {
               className={`flex justify-between items-center px-4 py-2 border rounded transition-all
                 ${task.completed ? 'bg-green-100 dark:bg-green-900 line-through' : 'bg-white dark:bg-gray-800'}`}
             >
-              <span
-                onClick={() => toggleComplete(task._id)}
-                className="cursor-pointer flex-1"
-              >
+              <span onClick={() => toggleComplete(task._id)} className="cursor-pointer flex-1">
                 {task.text}
               </span>
-              <button
-                onClick={() => deleteTask(task._id)}
-                className="ml-4 text-red-600 hover:text-red-800"
-              >
+              <button onClick={() => deleteTask(task._id)} className="ml-4 text-red-600 hover:text-red-800">
                 ✕
               </button>
             </li>

@@ -28,4 +28,15 @@ router.post('/', authenticateToken , async (req, res) => {
   }
 });
 
+// DELETE a schedule event
+router.delete('/:id', authenticateToken, async (req, res) => {
+  try {
+    const deleted = await Schedule.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ message: 'Event not found' });
+    res.json({ message: 'Event deleted' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete event' });
+  }
+});
+
 export default router;

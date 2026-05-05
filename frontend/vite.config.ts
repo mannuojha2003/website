@@ -10,7 +10,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:5000', // 👈 Backend URL
+        target: 'http://127.0.0.1:5000', // 👈 Backend URL (using IP for reliability)
         changeOrigin: true,
         secure: false,
         // Needed if using cookies or Authorization headers
@@ -22,4 +22,8 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    outDir: '../backend/dist',
+    emptyOutDir: true,
+  }
 });

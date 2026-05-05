@@ -11,6 +11,7 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Login form submitted for:', username);
     setError('');
 
     try {
@@ -37,7 +38,7 @@ export default function LoginPage() {
           <label className="block text-sm font-semibold mb-1">Username</label>
           <input
             type="text"
-            className="w-full border px-3 py-2 rounded bg-white dark:bg-gray-700 dark:text-white"
+            className="w-full border px-3 py-2 rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             required
@@ -47,7 +48,7 @@ export default function LoginPage() {
           <label className="block text-sm font-semibold mb-1">Password</label>
           <input
             type="password"
-            className="w-full border px-3 py-2 rounded bg-white dark:bg-gray-700 dark:text-white"
+            className="w-full border px-3 py-2 rounded bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required

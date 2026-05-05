@@ -1,9 +1,8 @@
-// backend/src/server.ts
-
+import 'dotenv/config';
 import express from 'express';
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
 import cors from 'cors';
+import path from 'path';
 
 // 🛣️ Route imports
 import authRoutes from './routes/auth';
@@ -12,28 +11,53 @@ import unitRoutes from './routes/units';
 import scheduleRoutes from './routes/schedule';
 import todoRoutes from './routes/todos';
 import registerRoutes from './routes/register';
+import sessionRoutes from './routes/sessions';
+
 // 📦 Load .env variables
-dotenv.config();
+console.log('JWT_SECRET loaded:', process.env.JWT_SECRET ? 'Yes' : 'No');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/dashboard';
 
+// 🪵 Global Request Logger
+app.use((req, _res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
+
 // 🔧 Middleware setup
 app.use(cors({
-  origin: 'http://localhost:5173', // ✅ Allow frontend origin
-  credentials: true,               // ✅ Allow cookies, auth headers
+  origin: ['http://localhost:5173', 'http://localhost:5174'], // ✅ Allow both common dev ports
+  credentials: true,
 }));
+
+// ... (existing imports)
 
 app.use(express.json()); // Parse incoming JSON requests
 
-// 🚏 Mount all routes
+// 🚏 Mount all API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/entries', entriesRoutes);
 app.use('/api/units', unitRoutes);
 app.use('/api/schedule', scheduleRoutes);
 app.use('/api/todos', todoRoutes);
 app.use('/api/register', registerRoutes);
+app.use('/api/sessions', sessionRoutes);
+
+// 🌐 Serve Frontend in Production
+const __dirname = path.resolve();
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '/frontend/dist')));
+
+  app.get('*', (req, res) => {
+    res.sendFile(path.resolve(__dirname, 'frontend', 'dist', 'index.html'));
+  });
+} else {
+  app.get('/', (req, res) => {
+    res.send('API is running...');
+  });
+}
 
 // ✅ Optional: Global error handler
 // app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
@@ -46,8 +70,8 @@ mongoose
   .connect(MONGO_URI)
   .then(() => {
     console.log('✅ MongoDB connected');
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running at http://localhost:${PORT}`);
+    app.listen(Number(PORT), '127.0.0.1', () => {
+      console.log(`🚀 Server running at http://127.0.0.1:${PORT}`);
     });
   })
   .catch((err) => {
